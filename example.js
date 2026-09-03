@@ -3,10 +3,15 @@
 
 import { EnverBridge } from './src/index.js';
 
-const bridge = new EnverBridge({
-  host: process.env.ENVER_HOST ?? '192.168.1.34',
-  bridgeId: process.env.ENVER_ID ?? '12345670',
-});
+const { ENVER_HOST, ENVER_ID } = process.env;
+
+if (!ENVER_HOST || !ENVER_ID) {
+  console.error('Set ENVER_HOST and ENVER_ID, for example:');
+  console.error('  ENVER_HOST=192.168.1.34 ENVER_ID=12345670 node example.js');
+  process.exit(1);
+}
+
+const bridge = new EnverBridge({ host: ENVER_HOST, bridgeId: ENVER_ID });
 
 for await (const reading of bridge.watch()) {
   console.log(reading.receivedAt.toISOString(), {
