@@ -1,0 +1,40 @@
+{
+  "name": "enverbridge",
+  "version": "1.0.0",
+  "description": "Read Envertech EnverBridge solar microinverter data locally over TCP, with no cloud dependency.",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "test": "node --test",
+    "fix": "npx prettier . --write"
+  },
+  "keywords": [
+    "envertech",
+    "enverbridge",
+    "evb202",
+    "solar",
+    "microinverter",
+    "photovoltaic",
+    "local",
+    "home-assistant"
+  ],
+  "author": "Thomas Steiner (steiner.thomas@gmail.com)",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tomayac/enverbridge.git"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "homepage": "https://github.com/tomayac/enverbridge#readme",
+  "bugs": {
+    "url": "https://github.com/tomayac/enverbridge/issues"
+  }
+}
