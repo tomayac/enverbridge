@@ -1,6 +1,6 @@
 {
   "name": "enverbridge",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Read Envertech EnverBridge solar microinverter data locally over TCP, with no cloud dependency.",
   "type": "module",
   "main": "src/index.js",

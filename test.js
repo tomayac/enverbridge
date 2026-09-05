@@ -2,8 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
+import net from 'node:net';
 import test from 'node:test';
-import { decodeFrame, FrameParser, createTrigger } from './src/index.js';
+import {
+  decodeFrame,
+  FrameParser,
+  createTrigger,
+  EnverBridge,
+} from './src/index.js';
 
 const LIVE_A =
   '68009668100412345670a4017d5100000000000012345670a47d41e85b740078bacb3b803d82320500000000000200005680168012345671a47d44284fcf0075606a3e593d82320500000000000000000000000012345672a47d421c5e1f007565603fb33d82320508000000000000000000000012345673a47d45745036007de17e3a803d8232050000000000000000000000007916';
@@ -78,6 +84,42 @@ test('FrameParser reassembles split and concatenated frames', () => {
   assert.equal(out.length, 3);
   assert.equal(decodeFrame(out[0]).panels.length, 4);
   assert.equal(decodeFrame(out[2]).panels, null);
+});
+
+test('watch reconnects when a connected bridge goes silent', async () => {
+  // A server that accepts connections but never sends a byte simulates the
+  // half-open/silent bridge that used to leave the watcher stuck. The idle
+  // timeout must force a reconnect, so we should see more than one connection.
+  let connections = 0;
+  const server = net.createServer((socket) => {
+    connections += 1;
+    socket.resume(); // drain the trigger, then stay silent
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const { port } = server.address();
+
+  const bridge = new EnverBridge({
+    host: '127.0.0.1',
+    port,
+    bridgeId: '12345670',
+  });
+  const controller = new AbortController();
+  const start = Date.now();
+  (async () => {
+    // Never yields (server sends nothing); we only care about reconnects.
+    for await (const _ of bridge.watch({
+      signal: controller.signal,
+      idleTimeoutMs: 80,
+      reconnectDelayMs: 5,
+    }));
+  })().catch(() => {});
+
+  while (connections < 2 && Date.now() - start < 3000) {
+    await new Promise((r) => setTimeout(r, 20));
+  }
+  controller.abort();
+  await new Promise((resolve) => server.close(resolve));
+  assert.ok(connections >= 2, `expected a reconnect, saw ${connections}`);
 });
 
 test('trigger is ASCII text, not decoded bytes', () => {

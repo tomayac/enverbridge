@@ -56,9 +56,15 @@ export class EnverBridge {
    * @param {object} [options]
    * @param {AbortSignal} [options.signal] Stops the iteration when aborted.
    * @param {number} [options.reconnectDelayMs] Pause before reconnecting.
+   * @param {number} [options.idleTimeoutMs] Drop and reconnect if no frame
+   *   arrives within this window. Defaults to 180000 (3 min); 0 disables it.
    * @yields {object} A decoded panel data reading.
    */
-  async *watch({ signal, reconnectDelayMs = 2000 } = {}) {
+  async *watch({
+    signal,
+    reconnectDelayMs = 2000,
+    idleTimeoutMs = 180000,
+  } = {}) {
     while (!signal?.aborted) {
       let queue = [];
       let wake;
@@ -72,6 +78,15 @@ export class EnverBridge {
         done = true;
         wake?.();
       };
+      // A bridge that accepts the TCP connection but then goes silent (or a
+      // half-open connection where the peer vanished without a FIN) would
+      // otherwise leave this watcher stuck forever. The bridge pushes a frame
+      // roughly every two minutes, so if nothing arrives within idleTimeoutMs
+      // we treat the connection as dead, destroy it, and reconnect (which
+      // re-sends the trigger). Any received byte resets this timer.
+      if (idleTimeoutMs > 0) {
+        socket.setTimeout(idleTimeoutMs, () => socket.destroy());
+      }
       socket.on('data', (chunk) => {
         for (const frame of parser.push(chunk)) {
           let reading;

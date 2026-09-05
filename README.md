@@ -37,6 +37,26 @@ The bridge pushes on its own schedule rather than answering on demand, so a
 single read can take up to about two minutes. Prefer `watch()` for anything long
 running.
 
+### Reconnection
+
+`watch()` reconnects on its own and accepts an options object:
+
+```js
+for await (const reading of bridge.watch({
+  signal, // optional AbortSignal to stop watching
+  reconnectDelayMs: 2000, // wait between reconnect attempts
+  idleTimeoutMs: 180000, // drop and reconnect if no frame arrives in time
+})) {
+  // ...
+}
+```
+
+`idleTimeoutMs` guards against a bridge that accepts the connection but then
+goes silent, or a half-open connection where the peer vanished without closing.
+Since the bridge pushes at least every two minutes, the default three-minute
+idle timeout forces a reconnect (which re-sends the trigger) rather than letting
+the watcher hang forever. Pass `0` to disable it.
+
 ### Reading shape
 
 ```js
